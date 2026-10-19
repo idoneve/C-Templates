@@ -2,6 +2,7 @@
 
 #include <inttypes.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 typedef uint64_t(*HashFunc)(const void *key);
 typedef uint64_t(*CompareFunc)(const void *key1, const void *key2);
@@ -81,7 +82,7 @@ uint64_t hashmap_put(HashMap *map, void *key, void *value) {
         return 0;
     }
 
-    if ((double)map->size / map->capacity >= 0.75) {
+    if ((double)map->size / (double)map->capacity >= 0.75) {
         hashmap_resize(map, map->capacity * 2);
     }
 

@@ -25,7 +25,7 @@ uint64_t string_hash(const void *key) {
 
     int c;
     while ((c = *str++)) {
-        hash = ((hash << 5) + hash) + c; // hash * 33 + c
+        hash = hash + c; // ((hash << 5) + hash) + c <=> 33h + c
     }
 
     return hash;
@@ -43,7 +43,7 @@ int main(void) {
         return 1;
     }
 
-    char keys[rand() % 1000][65];
+    char keys[2001][65];
     for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); ++i) {
         rand_str(keys[i], sizeof(keys[i]) - 1);
         if (!hashmap_put(map, keys[i], NULL)) {
@@ -51,7 +51,7 @@ int main(void) {
             return 1;
         }
 
-        if (((double)map->size / (double)map->capacity) >= 0.75) {
+        if (i % 100 == 0 && i != 0) {
             printf("i = %zu\n", i);
             hashmap_print(map);
             printf("\n\n");
