@@ -61,5 +61,6 @@ int main(void) {
     printf("New Map Size: %llu\n\n", map->size);
 
     hashmap_free(map);
+    
     return 0;
 }
