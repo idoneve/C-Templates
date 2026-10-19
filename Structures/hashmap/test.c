@@ -1,7 +1,22 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "hashmap.h"
+
+void rand_str(char *dest, size_t length) {
+    char charset[] =
+        "0123456789"
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    for (size_t i = 0; i < length; i++) {
+        dest[i] = charset[rand() % (sizeof(charset) - 1)];
+    }
+
+    dest[length] = '\0';
+}
 
 /* DJB2 String Hash Function */
 uint64_t string_hash(const void *key) {
@@ -16,51 +31,34 @@ uint64_t string_hash(const void *key) {
     return hash;
 }
 
-int64_t string_compare(const void *key1, const void *key2) {
+uint64_t string_compare(const void *key1, const void *key2) {
     return strcmp((const char *)key1, (const char *)key2) == 0;
 }
 
 int main(void) {
-    HashMap *map = hashmap_init(4, string_hash, string_compare);
+    srand((unsigned int)time(NULL));
+
+    HashMap *map = hashmap_init(128, string_hash, string_compare);
     if (!map) {
         return 1;
     }
 
-    int val1 = 100, val2 = 200, val3 = 300, val_update = 999;
+    char keys[rand() % 1000][65];
+    for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); ++i) {
+        rand_str(keys[i], sizeof(keys[i]) - 1);
+        if (!hashmap_put(map, keys[i], NULL)) {
+            hashmap_free(map);
+            return 1;
+        }
 
-    hashmap_put(map, "apple", &val1);
-    hashmap_put(map, "banana", &val2);
-    hashmap_put(map, "cherry", &val3);
-    hashmap_put(map, "apple", &val_update);
-
-    printf("Size: %llu, Capacity: %llu\n\n", map->size, map->capacity);
-
-    const Node *node_apple = hashmap_get(map, "apple");
-    const Node *node_banana = hashmap_get(map, "banana");
-    const Node *node_missing = hashmap_get(map, "orange");
-
-    if (node_apple) {
-        printf("Found 'apple': %d\n", *(int *)node_apple->value);
+        if (((double)map->size / (double)map->capacity) >= 0.75) {
+            printf("i = %zu\n", i);
+            hashmap_print(map);
+            printf("\n\n");
+        }
     }
-
-    if (node_banana) {
-        printf("Found 'banana': %d\n", *(int *)node_banana->value);
-    }
-
-    if (!node_missing) {
-        printf("'orange' correctly not found (NULL)\n\n");
-    }
-
-    uint64_t del_status = hashmap_delete(map, "banana");
-    printf("Deleted 'banana' status: %llu\n", del_status);
-
-    const Node *node_banana_check = hashmap_get(map, "banana");
-    if (!node_banana_check) {
-        printf("'banana' confirm deleted!\n");
-    }
-    printf("New Map Size: %llu\n\n", map->size);
 
     hashmap_free(map);
-    
+
     return 0;
 }

@@ -19,6 +19,8 @@ uint64_t hashmap_resize(HashMap *, uint64_t);
 
 const Node *hashmap_get(HashMap *, const void *);
 
+void hashmap_print(HashMap *);
+
 struct Node {
     void *key;
     void *value;
@@ -194,4 +196,70 @@ const Node *hashmap_get(HashMap *map, const void *key) {
     }
 
     return NULL;
+}
+
+void hashmap_print(HashMap *map) {
+    if (map == NULL) {
+        printf("HashMap: (null)\n");
+        return;
+    }
+
+    if (map->capacity == 0) {
+        printf("HashMap: capacity is zero\n");
+        return;
+    }
+
+    uint64_t occupied_buckets = 0;
+    uint64_t max_chain_length = 0;
+
+    for (uint64_t i = 0; i < map->capacity; ++i) {
+        uint64_t chain_length = 0;
+        for (const Node *node = map->buckets[i]; node != NULL; node = node->next) {
+            ++chain_length;
+        }
+
+        if (chain_length > 0) {
+            ++occupied_buckets;
+        }
+        if (chain_length > max_chain_length) {
+            max_chain_length = chain_length;
+        }
+    }
+
+    printf("HashMap: size=%" PRIu64 ", capacity=%" PRIu64
+        ", load=%.1f%%, occupied buckets=%" PRIu64
+        ", max chain=%" PRIu64 "\n",
+        map->size, map->capacity,
+        100.0 * (double)map->size / (double)map->capacity,
+        occupied_buckets, max_chain_length);
+
+    for (uint64_t start = 0; start < map->capacity; start += 32) {
+        uint64_t end = start + 32;
+        if (end > map->capacity) {
+            end = map->capacity;
+        }
+
+        printf("%3" PRIu64 "-%3" PRIu64 " | ", start, end - 1);
+        for (uint64_t i = start; i < end; ++i) {
+            uint64_t chain_length = 0;
+            for (const Node *node = map->buckets[i]; node != NULL; node = node->next) {
+                ++chain_length;
+            }
+
+            char marker = '.';
+            if (chain_length >= 1 && chain_length <= 9) {
+                marker = (char)('0' + chain_length);
+            } else if (chain_length >= 10 && chain_length <= 35) {
+                marker = (char)('A' + chain_length - 10);
+            } else if (chain_length > 35) {
+                marker = '+';
+            }
+
+            putchar(marker);
+            if ((i - start + 1) % 8 == 0 && i + 1 < end) {
+                putchar(' ');
+            }
+        }
+        putchar('\n');
+    }
 }
