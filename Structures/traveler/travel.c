@@ -44,7 +44,7 @@ void travel(trav_args_t *args) {
     /* While end condition is not met: do then iterate */
     while (travel_end(args)) {
         /* Do */
-        void **ret = travel_do(args);
+        void *ret = travel_do(args);
         if (ret != NULL) {
             // NON-DETERMINISM!!
         }
