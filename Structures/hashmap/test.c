@@ -5,6 +5,11 @@
 
 #include "hashmap.h"
 
+void rand_str(char *dest, size_t length);
+
+uint64_t string_hash(const void *key);
+uint64_t string_compare(const void *key1, const void *key2);
+
 void rand_str(char *dest, size_t length) {
     char charset[] =
         "0123456789"
@@ -12,7 +17,7 @@ void rand_str(char *dest, size_t length) {
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     for (size_t i = 0; i < length; i++) {
-        dest[i] = charset[rand() % (sizeof(charset) - 1)];
+        dest[i] = charset[(uint64_t)rand() % (sizeof(charset) - 1)];
     }
 
     dest[length] = '\0';
@@ -23,8 +28,8 @@ uint64_t string_hash(const void *key) {
     const char *str = (const char *)key;
     uint64_t hash = 5381;
 
-    int c;
-    while ((c = *str++)) {
+    uint64_t c;
+    while ((c = (uint64_t)*str++)) {
         hash = hash + c; // ((hash << 5) + hash) + c <=> 33h + c
     }
 
@@ -43,7 +48,7 @@ int main(void) {
         return 1;
     }
 
-    char keys[2001][65];
+    char keys[10001][65];
     for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); ++i) {
         rand_str(keys[i], sizeof(keys[i]) - 1);
         if (!hashmap_put(map, keys[i], NULL)) {
@@ -51,7 +56,7 @@ int main(void) {
             return 1;
         }
 
-        if (i % 100 == 0 && i != 0) {
+        if (i % 1000 == 0 && i != 0) {
             printf("i = %zu\n", i);
             hashmap_print(map);
             printf("\n\n");
