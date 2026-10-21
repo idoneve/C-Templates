@@ -66,7 +66,7 @@ int main(void) {
 
     char keys[1001][65];
     char rand_key[sizeof(keys[0])];
-    for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); ++i) {
+    for (int64_t i = 0; i < (int64_t)(sizeof(keys) / sizeof(keys[0])); ++i) {
         rand_str(keys[i], sizeof(keys[i]) - 1);
         if (!hashmap_put(map, keys[i], (void *)i)) {
             hashmap_free(map);
@@ -74,7 +74,7 @@ int main(void) {
         }
 
         if ((double)map->size / (double)map->capacity >= 0.75 || i == sizeof(keys) / sizeof(keys[0]) - 1) {
-            printf("i = %zu\n", i);
+            printf("i = %lld\n", i);
             hashmap_print(map);
             printf("\n\n");
         }
@@ -84,13 +84,13 @@ int main(void) {
         }
     }
 
-    printf("rand key = %s\n", rand_key);
-
-    Node *rand_node = hashmap_get(map, rand_key);
+    const Node *rand_node = (const Node *)hashmap_get(map, rand_key);
     if (rand_node != NULL) {
-        printf("rand node val = %d\n", (int64_t)rand_node->value);
+        printf("rand node key = %s\n", (const char *)rand_node->key);
+        printf("rand node hash = %lld\n", map->hash(rand_node->key) % map->capacity);
+        printf("rand node val = %lld\n", (int64_t)rand_node->value);
     } else {
-        printf("rand key not found\n");
+        printf("rand key not found\n\n");
     }
 
     hashmap_free(map);
