@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-typedef uint64_t(*HashFunc)(const void *key);
-typedef uint64_t(*CompareFunc)(const void *key1, const void *key2);
+typedef uint64_t(*HashFunc)(const void *);
+typedef uint64_t(*CompareFunc)(const void *, const void *);
 
 typedef struct Node Node;
 typedef struct HashMap HashMap;
