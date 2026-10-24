@@ -22,7 +22,7 @@ ifeq ($(shell uname -s),Darwin)
   CC = clang
   opts = -D_FORTIFY_SOURCE=2 -fstack-protector-all -g -$(OPTIMIZER) -std=$(CLANG_CSTD) \
          -Wall -Wextra -Wpedantic -Wshadow -Winit-self -Wpointer-arith \
-         -Wcast-qual -fno-common
+         -Wcast-qual
 else
   CC = gcc
   opts = -D_FORTIFY_SOURCE=2 -fno-diagnostics-show-option \

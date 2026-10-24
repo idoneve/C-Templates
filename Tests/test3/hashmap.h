@@ -1,11 +1,11 @@
 #pragma once
 
 #include <inttypes.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
 
-typedef uint64_t(*HashFunc)(const void *key);
-typedef uint64_t(*CompareFunc)(const void *key1, const void *key2);
+typedef uint64_t(*HashFunc)(const void *);
+typedef uint64_t(*CompareFunc)(const void *, const void *);
 
 typedef struct Node Node;
 typedef struct HashMap HashMap;
@@ -38,8 +38,7 @@ struct HashMap {
     CompareFunc compare;
 };
 
-HashMap *hashmap_init(const uint64_t capacity, HashFunc h_func,
-    CompareFunc c_func) {
+HashMap *hashmap_init(const uint64_t capacity, HashFunc h_func, CompareFunc c_func) {
     HashMap *map = (HashMap *)malloc(sizeof(HashMap));
     if (map == NULL) {
         return NULL;
@@ -229,10 +228,11 @@ void hashmap_print(HashMap *map) {
     }
 
     printf("HashMap: size=%" PRIu64 ", capacity=%" PRIu64
-        ", load=%.1f%%, occupied buckets=%" PRIu64 ", max chain=%" PRIu64 "\n",
+        ", load=%.1f%%, occupied buckets=%" PRIu64
+        ", max chain=%" PRIu64 "\n",
         map->size, map->capacity,
-        100.0 * (double)map->size / (double)map->capacity, occupied_buckets,
-        max_chain_length);
+        100.0 * (double)map->size / (double)map->capacity,
+        occupied_buckets, max_chain_length);
 
     for (uint64_t start = 0; start < map->capacity; start += 32) {
         uint64_t end = start + 32;
@@ -243,8 +243,7 @@ void hashmap_print(HashMap *map) {
         printf("%3" PRIu64 "-%3" PRIu64 " | ", start, end - 1);
         for (uint64_t i = start; i < end; ++i) {
             uint64_t chain_length = 0;
-            for (const Node *node = map->buckets[i]; node != NULL;
-                node = node->next) {
+            for (const Node *node = map->buckets[i]; node != NULL; node = node->next) {
                 ++chain_length;
             }
 
