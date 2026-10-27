@@ -5,20 +5,20 @@
 
 #include "hashmap.h"
 
-void rand_str(char *, size_t);
+void rand_str(char *, uint64_t);
 
 uint64_t fnv1a_hash(const void *);
 uint64_t djb2_hash(const void *);
 
 uint64_t string_compare(const void *, const void *);
 
-void rand_str(char *dest, size_t length) {
+void rand_str(char *dest, uint64_t length) {
     char charset[] =
         "0123456789"
         "abcdefghijklmnopqrstuvwxyz"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    for (size_t i = 0; i < length; i++) {
+    for (uint64_t i = 0; i < length; i++) {
         dest[i] = charset[(uint64_t)rand() % (sizeof(charset) - 1)];
     }
 
@@ -43,12 +43,10 @@ uint64_t fnv1a_hash(const void *key) {
 uint64_t djb2_hash(const void *key) {
     const char *str = (const char *)key;
     uint64_t hash = 5381;
-
     uint64_t c;
     while ((c = (uint64_t)*str++)) {
         hash = ((hash << 5) + hash) + c; // ((hash << 5) + hash) + c <=> 33h + c
     }
-
     return hash;
 }
 
@@ -64,7 +62,7 @@ int main(void) {
         return 1;
     }
 
-    char keys[1001][65];
+    char keys[1001][32];
     char rand_key[sizeof(keys[0])];
     for (int64_t i = 0; i < (int64_t)(sizeof(keys) / sizeof(keys[0])); ++i) {
         rand_str(keys[i], sizeof(keys[i]) - 1);
@@ -79,7 +77,7 @@ int main(void) {
             printf("\n\n");
         }
 
-        if (i == 67) {
+        if (i == rand() % map->size) {
             strcpy(rand_key, keys[i]);
         }
     }
