@@ -20,7 +20,7 @@ uint64_t hashmap_resize(HashMap *, uint64_t);
 
 const Node *hashmap_get(HashMap *, const void *);
 
-void hashmap_print(HashMap *);
+void hashmap_print(HashMap *); 
 
 struct Node {
     void *key;

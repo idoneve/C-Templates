@@ -57,12 +57,12 @@ uint64_t string_compare(const void *key1, const void *key2) {
 int main(void) {
     srand((unsigned int)time(NULL));
 
-    HashMap *map = hashmap_init(128, fnv1a_hash, string_compare);
+    HashMap *map = hashmap_init(128, djb2_hash, string_compare);
     if (!map) {
         return 1;
     }
 
-    char keys[1001][32];
+    char keys[4000001][16];
     char rand_key[sizeof(keys[0])];
     for (int64_t i = 0; i < (int64_t)(sizeof(keys) / sizeof(keys[0])); ++i) {
         rand_str(keys[i], sizeof(keys[i]) - 1);
