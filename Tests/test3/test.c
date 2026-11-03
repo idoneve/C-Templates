@@ -1,97 +1,178 @@
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
-#include "hashmap.h"
+typedef struct vector_t vector_t;
+typedef struct chinese_remainder_t chinese_remainder_t;
 
-void rand_str(char *, uint64_t);
+uint64_t gcd_uint64(const uint64_t, const uint64_t);
+uint8_t is_coprime(const size_t, const uint64_t *, const uint64_t);
 
-uint64_t fnv1a_hash(const void *);
-uint64_t djb2_hash(const void *);
+vector_t *vector_init(const size_t, const int64_t *);
+vector_t *vector_rand_init(const size_t, int64_t, int64_t);
+vector_t *vector_rand_coprime_init(const size_t n, const uint64_t start, const uint64_t end);
+void vector_free(vector_t *);
 
-uint64_t string_compare(const void *, const void *);
+chinese_remainder_t *crt_init(vector_t *, vector_t *);
+void crt_free(chinese_remainder_t *);
+void crt_print(const chinese_remainder_t *);
 
-void rand_str(char *dest, uint64_t length) {
-    char charset[] =
-        "0123456789"
-        "abcdefghijklmnopqrstuvwxyz"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+struct vector_t {
+    size_t nargs;
+    int64_t *args;
+};
 
-    for (uint64_t i = 0; i < length; i++) {
-        dest[i] = charset[(uint64_t)rand() % (sizeof(charset) - 1)];
+struct chinese_remainder_t {
+    vector_t *moduli;
+    vector_t *residue;
+};
+
+uint64_t gcd_uint64(uint64_t a, uint64_t b) {
+    while (b) {
+        uint64_t t = a % b;
+        a = b;
+        b = t;
     }
 
-    dest[length] = '\0';
+    return a;
 }
 
-/* FNV-1a Generic Hash Function */
-#define FNV_OFFSET 2166136261U
-#define FNV_PRIME 16777619U
+uint8_t is_coprime(const size_t nargs, const uint64_t *args, const uint64_t n) {
+    if (n == 0) return 0;
 
-uint64_t fnv1a_hash(const void *key) {
-    const unsigned char *p = key;
-    uint64_t hash = FNV_OFFSET;
-    while (*p) {
-        hash ^= *p++;
-        hash *= FNV_PRIME;
+    for (size_t i = 0; i < nargs; ++i) {
+        if (gcd_uint64(args[i], n) != 1) return 0;
     }
-    return hash;
+
+    return 1;
 }
 
-/* DJB2 String Hash Function */
-uint64_t djb2_hash(const void *key) {
-    const char *str = (const char *)key;
-    uint64_t hash = 5381;
-    uint64_t c;
-    while ((c = (uint64_t)*str++)) {
-        hash = ((hash << 5) + hash) + c; // ((hash << 5) + hash) + c <=> 33h + c
+vector_t *vector_init(const size_t nargs, const int64_t *args) {
+    if (nargs == 0 || args == NULL) return NULL;
+
+    vector_t *vector = malloc(sizeof(*vector));
+    if (!vector) return NULL;
+
+    vector->nargs = nargs;
+    vector->args = malloc(sizeof(int64_t) * nargs);
+    if (!vector->args) {
+        free(vector);
+        return NULL;
     }
-    return hash;
+
+    memcpy(vector->args, args, sizeof(int64_t) * nargs);
+
+    return vector;
 }
 
-uint64_t string_compare(const void *key1, const void *key2) {
-    return strcmp((const char *)key1, (const char *)key2) == 0;
+vector_t *vector_rand_init(const size_t n, const int64_t start, const int64_t end) {
+    if (n == 0 || end <= start) return NULL;
+
+    int64_t *args = (int64_t *)malloc(sizeof(int64_t) * n);
+    for (size_t i = 0; i < n; ++i) {
+        args[i] = start + random() % (end - start + 1);
+    }
+
+    vector_t *vector = vector_init(n, args);
+
+    free(args);
+
+    return vector;
+}
+
+vector_t *vector_rand_coprime_init(const size_t n, const uint64_t start, const uint64_t end) {
+    if (n == 0 || end <= start || start < 1) return NULL;
+
+    uint64_t span = end - start + 1;
+
+    uint64_t *args = calloc(n, sizeof(*args));
+    if (!args) return NULL;
+
+    const size_t MAX_ATTEMPTS = 10000;
+    size_t count = 0;
+    size_t i = 0;
+    while (i < n) {
+        if (++count > MAX_ATTEMPTS) {
+            free(args);
+            args = NULL;
+
+            return NULL;
+        }
+
+        uint64_t cand = start + (uint64_t)random() % span;
+        if (is_coprime(i, args, cand)) {
+            args[i++] = cand;
+        }
+    }
+
+    vector_t *vector = vector_init(n, args);
+
+    free(args);
+
+    return vector;
+}
+
+void vector_free(vector_t *vector) {
+    if (!vector) return;
+
+    free(vector->args);
+    free(vector);
+}
+
+chinese_remainder_t *crt_init(vector_t *moduli, vector_t *residue) {
+    if (!moduli || !residue) return NULL;
+
+    chinese_remainder_t *crt = malloc(sizeof(*crt));
+    if (crt == NULL) return NULL;
+
+    crt->moduli = moduli;
+    crt->residue = residue;
+
+    return crt;
+}
+
+void crt_free(chinese_remainder_t *crt) {
+    if (crt == NULL) return;
+
+    free(crt);
+}
+
+void crt_print(const chinese_remainder_t *crt) {
+    if (!crt || !crt->residue || !crt->moduli) {
+        puts("Error: CRT not initialized");
+        return;
+    }
+    if (crt->residue->nargs == 0 || crt->moduli->nargs == 0 ||
+        crt->residue->nargs != crt->moduli->nargs) {
+        puts("Error: moduli/residues size mismatch");
+        return;
+    }
+    for (size_t i = 0; i < crt->residue->nargs; ++i) {
+        printf("x === %" PRId64 " (mod %" PRId64 ")\n",
+            crt->residue->args[i], crt->moduli->args[i]);
+    }
 }
 
 int main(void) {
-    srand((unsigned int)time(NULL));
+    srandom((unsigned int)time(NULL));
 
-    HashMap *map = hashmap_init(128, djb2_hash, string_compare);
-    if (!map) {
-        return 1;
-    }
+    const size_t n = 10;
 
-    char keys[4000001][16];
-    char rand_key[sizeof(keys[0])];
-    for (int64_t i = 0; i < (int64_t)(sizeof(keys) / sizeof(keys[0])); ++i) {
-        rand_str(keys[i], sizeof(keys[i]) - 1);
-        if (!hashmap_put(map, keys[i], (void *)i)) {
-            hashmap_free(map);
-            return 1;
-        }
+    vector_t *residue = vector_rand_init(n, 0, 999);
+    if (!residue) { fputs("residue init failed\n", stderr); return 1; }
 
-        if ((double)map->size / (double)map->capacity >= 0.75 || i == sizeof(keys) / sizeof(keys[0]) - 1) {
-            printf("i = %lld\n", i);
-            hashmap_print(map);
-            printf("\n\n");
-        }
+    vector_t *moduli = vector_rand_coprime_init(n, 2, 1000);
+    if (!moduli) { fputs("moduli init failed\n", stderr); vector_free(residue); return 1; }
 
-        if (i == rand() % map->size) {
-            strcpy(rand_key, keys[i]);
-        }
-    }
+    chinese_remainder_t *crt = crt_init(moduli, residue);
+    if (!crt) { fputs("crt init failed\n", stderr); vector_free(moduli); vector_free(residue); return 1; }
 
-    const Node *rand_node = (const Node *)hashmap_get(map, rand_key);
-    if (rand_node != NULL) {
-        printf("rand node key = %s\n", (const char *)rand_node->key);
-        printf("rand node hash = %lld\n", map->hash(rand_node->key) % map->capacity);
-        printf("rand node val = %lld\n", (int64_t)rand_node->value);
-    } else {
-        printf("rand key not found\n\n");
-    }
+    crt_print(crt);
 
-    hashmap_free(map);
+    crt_free(crt);
+    vector_free(moduli);
+    vector_free(residue);
 
     return 0;
 }
