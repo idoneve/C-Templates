@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 typedef struct vector_t vector_t;
 typedef struct chinese_remainder_t chinese_remainder_t;
@@ -9,7 +10,7 @@ typedef struct chinese_remainder_t chinese_remainder_t;
 uint64_t gcd_uint64(const uint64_t, const uint64_t);
 uint8_t is_coprime(const size_t, const uint64_t *, const uint64_t);
 
-vector_t *vector_init(const size_t, const int64_t *);
+vector_t *vector_init(const size_t, int64_t *);
 vector_t *vector_rand_init(const size_t, int64_t, int64_t);
 vector_t *vector_rand_coprime_init(const size_t n, const uint64_t start, const uint64_t end);
 void vector_free(vector_t *);
@@ -48,7 +49,7 @@ uint8_t is_coprime(const size_t nargs, const uint64_t *args, const uint64_t n) {
     return 1;
 }
 
-vector_t *vector_init(const size_t nargs, const int64_t *args) {
+vector_t *vector_init(const size_t nargs, int64_t *args) {
     if (nargs == 0 || args == NULL) return NULL;
 
     vector_t *vector = malloc(sizeof(*vector));
@@ -106,7 +107,7 @@ vector_t *vector_rand_coprime_init(const size_t n, const uint64_t start, const u
         }
     }
 
-    vector_t *vector = vector_init(n, args);
+    vector_t *vector = vector_init(n, (int64_t *)args);
 
     free(args);
 
@@ -154,6 +155,20 @@ void crt_print(const chinese_remainder_t *crt) {
     }
 }
 
+void crt_reduce(chinese_remainder_t *crt) {
+    if (!crt || !crt->residue || !crt->moduli || crt->residue->nargs != crt->moduli->nargs) return;
+
+    for (size_t i = 0; i < crt->residue->nargs; ++i) {
+        int64_t m = crt->moduli->args[i];
+        if (m <= 0) continue;
+
+        int64_t r = crt->residue->args[i] % m;
+        if (r < 0) r += m;
+
+        crt->residue->args[i] = r;
+    }
+}
+
 int main(void) {
     srandom((unsigned int)time(NULL));
 
@@ -167,6 +182,8 @@ int main(void) {
 
     chinese_remainder_t *crt = crt_init(moduli, residue);
     if (!crt) { fputs("crt init failed\n", stderr); vector_free(moduli); vector_free(residue); return 1; }
+
+    crt_reduce(crt);
 
     crt_print(crt);
 
