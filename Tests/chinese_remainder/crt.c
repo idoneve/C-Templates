@@ -19,6 +19,17 @@ void crt_print(const chinese_remainder_t *crt);
 void crt_reduce(chinese_remainder_t *crt);
 int crt_solve(const chinese_remainder_t *crt, mpz_t x);
 
+struct vector_t {
+    size_t argc;
+    mpz_t *argv;
+};
+
+struct chinese_remainder_t {
+    vector_t *moduli;
+    vector_t *residue;
+    mpz_t M;
+};
+
 static int is_coprime_with(const mpz_t *argv, size_t count, const mpz_t cand) {
     for (size_t i = 0; i < count; ++i) {
         mpz_t g;
@@ -30,17 +41,6 @@ static int is_coprime_with(const mpz_t *argv, size_t count, const mpz_t cand) {
     }
     return 1;
 }
-
-struct vector_t {
-    size_t argc;
-    mpz_t *argv;
-};
-
-struct chinese_remainder_t {
-    vector_t *moduli;
-    vector_t *residue;
-    mpz_t M;
-};
 
 vector_t *vector_init(size_t argc, const mpz_t *argv) {
     if (argc == 0 || argv == NULL) return NULL;
