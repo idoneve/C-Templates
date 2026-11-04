@@ -236,15 +236,17 @@ uint64_t crt_solve(const chinese_remainder_t *crt) {
     return (uint64_t)x;
 }
 
+
+// TODO: switch to bignum library
 int main(void) {
     srandom((unsigned int)time(NULL));
 
-    const size_t n = 3;
+    const size_t n = 10;
 
     vector_t *residue = vector_rand_init(n, 0, 99);
     if (!residue) { fputs("residue init failed\n", stderr); return 1; }
 
-    vector_t *moduli = vector_rand_coprime_init(n, 2, 11);
+    vector_t *moduli = vector_rand_coprime_init(n, 2, 100);
     if (!moduli) { fputs("moduli init failed\n", stderr); vector_free(residue); return 1; }
 
     chinese_remainder_t *crt = crt_init(moduli, residue);
