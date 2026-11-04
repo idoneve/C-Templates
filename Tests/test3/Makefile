@@ -22,7 +22,8 @@ ifeq ($(shell uname -s),Darwin)
   CC = clang
   opts = -D_FORTIFY_SOURCE=2 -fstack-protector-all -g -$(OPTIMIZER) -std=$(CLANG_CSTD) \
          -Wall -Wextra -Wpedantic -Wshadow -Winit-self -Wpointer-arith \
-         -Wcast-qual
+         -Wcast-qual -I/opt/homebrew/include -L/opt/homebrew/lib
+	LDLIBS += -lgmp
 else
   CC = gcc
   opts = -D_FORTIFY_SOURCE=2 -fno-diagnostics-show-option \
@@ -33,6 +34,7 @@ else
          -Wpointer-arith -Wcast-qual -Wconversion \
          -Wstrict-prototypes -Wmissing-prototypes \
          -Wsign-conversion -Wdouble-promotion
+	LDLIBS += -lgmp
 # For kernel code
 # opts += -ffreestanding -fno-stack-protector -fno-pic -mno-red-zone
 endif
@@ -54,7 +56,7 @@ DEPS = $(OBJS:.o=.d)
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ $(LDLIBS) -o $@
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
