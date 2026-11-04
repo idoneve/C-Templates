@@ -1,6 +1,7 @@
 #include <gmp.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 typedef struct vector_t vector_t;
@@ -224,6 +225,46 @@ int main(int argc, char **argv) {
         vector_free(residue); return 1;
     }
 
+    // const char str_hash[] = "EAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    // const char key[] = "\x61\x65\x67\x6b\x7f\x02\x03\x89\x05\x07\x0b\x0d\x6d\x71\x11\x35\x3b\x43\x13\x17\x1d\x1f\x25\x2b\x2f\x47\x49\x4f\x53\x3d";
+
+    // const size_t L_str = strlen(str_hash);
+    // const size_t L_key = strlen(key);
+
+    // if (L_str != L_key) {
+    //     printf("%lu != %lu\n", L_str, L_key);
+    //     return 1;
+    // }
+    // const size_t LENGTH = L_str;
+
+    // mpz_t *mpz_str_hash = malloc(LENGTH * sizeof(mpz_t));
+    // mpz_t *mpz_key = malloc(LENGTH * sizeof(mpz_t));
+    // if (!mpz_str_hash || !mpz_key) return 1;
+
+    // for (size_t i = 0; i < LENGTH; ++i) {
+    //     mpz_init(mpz_str_hash[i]);
+    //     mpz_init(mpz_key[i]);
+
+    //     uint64_t ascii_str = (uint64_t)(unsigned char)str_hash[i];
+    //     uint64_t ascii_key = (uint64_t)(unsigned char)key[i];
+
+    //     mpz_set_ui(mpz_str_hash[i], ascii_str);
+    //     mpz_set_ui(mpz_key[i], ascii_key);
+    // }
+
+    // printf("Original String: %s\n", str_hash);
+    // for (size_t i = 0; i < LENGTH; ++i) {
+    //     gmp_printf("'%c' -> %Zd\n", str_hash[i], mpz_str_hash[i]);
+    // }
+
+    // printf("\nOriginal Key: %s\n", key);
+    // for (size_t i = 0; i < LENGTH; ++i) {
+    //     gmp_printf("'%c' -> %Zd\n", key[i], mpz_key[i]);
+    // }
+
+    // vector_t *moduli = vector_init(30, (const mpz_t *)mpz_key);
+    // vector_t *residue = vector_init(30, (const mpz_t *)mpz_str_hash);
+
     chinese_remainder_t *crt = crt_init(moduli, residue);
     if (!crt) {
         fputs("crt init failed\n", stderr);
@@ -237,6 +278,13 @@ int main(int argc, char **argv) {
     if (crt_solve(crt, x))
         gmp_printf("\nx = %Zd (mod %Zd)\n", x, crt->M);
     mpz_clear(x);
+
+    // for (size_t i = 0; i < LENGTH; ++i) {
+    //     mpz_clear(mpz_str_hash[i]);
+    //     mpz_clear(mpz_key[i]);
+    // }
+    // free(mpz_str_hash);
+    // free(mpz_key);
 
     crt_free(crt);
     vector_free(moduli);
