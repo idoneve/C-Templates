@@ -182,7 +182,7 @@ int crt_solve(const chinese_remainder_t *crt, mpz_t x) {
     mpz_set_ui(sum, 0);
 
     for (size_t i = 0; i < n; ++i) {
-        const __mpz_struct *mi = &crt->moduli->argv[i];
+        const __mpz_struct *mi = (__mpz_struct *)&crt->moduli->argv[i];
         if (mpz_sgn(mi) <= 0) {
             puts("Error: non-positive modulus");
             goto fail;
