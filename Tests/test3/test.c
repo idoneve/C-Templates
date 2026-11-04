@@ -7,22 +7,22 @@ typedef struct vector_t vector_t;
 typedef struct chinese_remainder_t chinese_remainder_t;
 
 struct vector_t {
-    size_t nargs;
-    mpz_t *args;
+    size_t argc;
+    mpz_t *argv;
 };
 
-vector_t *vector_init(size_t nargs, const mpz_t *args) {
-    if (nargs == 0 || args == NULL) return NULL;
+vector_t *vector_init(size_t argc, const mpz_t *argv) {
+    if (argc == 0 || argv == NULL) return NULL;
 
     vector_t *v = malloc(sizeof(*v));
     if (!v) return NULL;
 
-    v->nargs = nargs;
-    v->args = malloc(sizeof(mpz_t) * nargs);
-    if (!v->args) { free(v); return NULL; }
+    v->argc = argc;
+    v->argv = malloc(sizeof(mpz_t) * argc);
+    if (!v->argv) { free(v); return NULL; }
 
-    for (size_t i = 0; i < nargs; ++i)
-        mpz_init_set(v->args[i], args[i]);
+    for (size_t i = 0; i < argc; ++i)
+        mpz_init_set(v->argv[i], argv[i]);
 
     return v;
 }
@@ -45,11 +45,11 @@ vector_t *vector_rand_init(size_t n, long start, long end) {
     return v;
 }
 
-static int is_coprime_with(const mpz_t *args, size_t count, const mpz_t cand) {
+static int is_coprime_with(const mpz_t *argv, size_t count, const mpz_t cand) {
     for (size_t i = 0; i < count; ++i) {
         mpz_t g;
         mpz_init(g);
-        mpz_gcd(g, args[i], cand);
+        mpz_gcd(g, argv[i], cand);
         int ok = mpz_cmp_ui(g, 1) == 0;
         mpz_clear(g);
         if (!ok) return 0;
@@ -87,9 +87,9 @@ vector_t *vector_rand_coprime_init(size_t n, unsigned long start, unsigned long 
 
 void vector_free(vector_t *v) {
     if (!v) return;
-    for (size_t i = 0; i < v->nargs; ++i)
-        mpz_clear(v->args[i]);
-    free(v->args);
+    for (size_t i = 0; i < v->argc; ++i)
+        mpz_clear(v->argv[i]);
+    free(v->argv);
     free(v);
 }
 
@@ -101,7 +101,7 @@ struct chinese_remainder_t {
 
 chinese_remainder_t *crt_init(vector_t *moduli, vector_t *residue) {
     if (!moduli || !residue) return NULL;
-    if (moduli->nargs == 0 || moduli->nargs != residue->nargs) return NULL;
+    if (moduli->argc == 0 || moduli->argc != residue->argc) return NULL;
 
     chinese_remainder_t *crt = malloc(sizeof(*crt));
     if (!crt) return NULL;
@@ -110,13 +110,13 @@ chinese_remainder_t *crt_init(vector_t *moduli, vector_t *residue) {
     crt->residue = residue;
     mpz_init_set_ui(crt->M, 1);
 
-    for (size_t i = 0; i < moduli->nargs; ++i) {
-        if (mpz_cmp_ui(moduli->args[i], 1) <= 0) {   /* m <= 1 */
+    for (size_t i = 0; i < moduli->argc; ++i) {
+        if (mpz_cmp_ui(moduli->argv[i], 1) <= 0) {   /* m <= 1 */
             mpz_clear(crt->M);
             free(crt);
             return NULL;
         }
-        mpz_mul(crt->M, crt->M, moduli->args[i]);
+        mpz_mul(crt->M, crt->M, moduli->argv[i]);
     }
     return crt;
 }
@@ -132,44 +132,44 @@ void crt_print(const chinese_remainder_t *crt) {
         puts("Error: CRT not initialized");
         return;
     }
-    if (crt->residue->nargs == 0 ||
-        crt->residue->nargs != crt->moduli->nargs) {
+    if (crt->residue->argc == 0 ||
+        crt->residue->argc != crt->moduli->argc) {
         puts("Error: moduli/residues size mismatch");
         return;
     }
-    for (size_t i = 0; i < crt->residue->nargs; ++i) {
+    for (size_t i = 0; i < crt->residue->argc; ++i) {
         gmp_printf("x === %Zd (mod %Zd)\n",
-            crt->residue->args[i], crt->moduli->args[i]);
+            crt->residue->argv[i], crt->moduli->argv[i]);
     }
 }
 
 void crt_reduce(chinese_remainder_t *crt) {
     if (!crt || !crt->residue || !crt->moduli ||
-        crt->residue->nargs != crt->moduli->nargs) return;
+        crt->residue->argc != crt->moduli->argc) return;
 
-    for (size_t i = 0; i < crt->residue->nargs; ++i) {
-        if (mpz_sgn(crt->moduli->args[i]) <= 0) continue;
-        mpz_mod(crt->residue->args[i],
-            crt->residue->args[i],
-            crt->moduli->args[i]);
+    for (size_t i = 0; i < crt->residue->argc; ++i) {
+        if (mpz_sgn(crt->moduli->argv[i]) <= 0) continue;
+        mpz_mod(crt->residue->argv[i],
+            crt->residue->argv[i],
+            crt->moduli->argv[i]);
     }
 }
 
 int crt_solve(const chinese_remainder_t *crt, mpz_t x) {
     if (!crt || !crt->moduli || !crt->residue ||
-        crt->moduli->nargs != crt->residue->nargs ||
-        crt->moduli->nargs == 0) {
+        crt->moduli->argc != crt->residue->argc ||
+        crt->moduli->argc == 0) {
         puts("Error: CRT not initialized");
         return 0;
     }
 
-    const size_t n = crt->moduli->nargs;
+    const size_t n = crt->moduli->argc;
     mpz_t sum, Mi, inv, term;
     mpz_inits(sum, Mi, inv, term, NULL);
     mpz_set_ui(sum, 0);
 
     for (size_t i = 0; i < n; ++i) {
-        const __mpz_struct *mi = &crt->moduli->args[i];
+        const __mpz_struct *mi = &crt->moduli->argv[i];
         if (mpz_sgn(mi) <= 0) {
             puts("Error: non-positive modulus");
             goto fail;
@@ -179,7 +179,7 @@ int crt_solve(const chinese_remainder_t *crt, mpz_t x) {
             puts("Error: moduli not pairwise coprime");
             goto fail;
         }
-        mpz_mul(term, crt->residue->args[i], Mi);
+        mpz_mul(term, crt->residue->argv[i], Mi);
         mpz_mul(term, term, inv);
         mpz_add(sum, sum, term);
     }
@@ -194,11 +194,11 @@ fail:
     return 0;
 }
 
-int main(void) {
+int main(int argc, char **argv) {
     srandom((unsigned int)time(NULL));
 
-    const size_t n = 30;
-    const unsigned long max = 1000000;
+    const size_t n = 100;
+    const unsigned long max = 100000000;
 
     vector_t *residue = vector_rand_init(n, -(long)max, (long)max);
     if (!residue) { fputs("residue init failed\n", stderr); return 1; }
@@ -220,7 +220,7 @@ int main(void) {
 
     mpz_t x; mpz_init(x);
     if (crt_solve(crt, x))
-        gmp_printf("x = %Zd (mod %Zd)\n", x, crt->M);
+        gmp_printf("\nx = %Zd (mod %Zd)\n", x, crt->M);
     mpz_clear(x);
 
     crt_free(crt);
