@@ -241,11 +241,12 @@ int main(void) {
     srandom((unsigned int)time(NULL));
 
     const size_t n = 5;
+    const uint64_t max = 13;
 
-    vector_t *residue = vector_rand_init(n, 0, 99);
+    vector_t *residue = vector_rand_init(n, 0, max);
     if (!residue) { fputs("residue init failed\n", stderr); return 1; }
 
-    vector_t *moduli = vector_rand_coprime_init(n, 2, 17);
+    vector_t *moduli = vector_rand_coprime_init(n, 2, max);
     if (!moduli) { fputs("moduli init failed\n", stderr); vector_free(residue); return 1; }
 
     chinese_remainder_t *crt = crt_init(moduli, residue);
