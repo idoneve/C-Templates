@@ -6,9 +6,40 @@
 typedef struct vector_t vector_t;
 typedef struct chinese_remainder_t chinese_remainder_t;
 
+static int is_coprime_with(const mpz_t *argv, size_t count, const mpz_t cand);
+
+vector_t *vector_init(size_t argc, const mpz_t *argv);
+vector_t *vector_rand_init(size_t n, long start, long end);
+vector_t *vector_rand_coprime_init(size_t n, unsigned long start, unsigned long end);
+void vector_free(vector_t *v);
+
+chinese_remainder_t *crt_init(vector_t *moduli, vector_t *residue);
+void crt_free(chinese_remainder_t *crt);
+void crt_print(const chinese_remainder_t *crt);
+void crt_reduce(chinese_remainder_t *crt);
+int crt_solve(const chinese_remainder_t *crt, mpz_t x);
+
+static int is_coprime_with(const mpz_t *argv, size_t count, const mpz_t cand) {
+    for (size_t i = 0; i < count; ++i) {
+        mpz_t g;
+        mpz_init(g);
+        mpz_gcd(g, argv[i], cand);
+        int ok = mpz_cmp_ui(g, 1) == 0;
+        mpz_clear(g);
+        if (!ok) return 0;
+    }
+    return 1;
+}
+
 struct vector_t {
     size_t argc;
     mpz_t *argv;
+};
+
+struct chinese_remainder_t {
+    vector_t *moduli;
+    vector_t *residue;
+    mpz_t M;
 };
 
 vector_t *vector_init(size_t argc, const mpz_t *argv) {
@@ -43,18 +74,6 @@ vector_t *vector_rand_init(size_t n, long start, long end) {
     for (size_t i = 0; i < n; ++i) mpz_clear(tmp[i]);
     free(tmp);
     return v;
-}
-
-static int is_coprime_with(const mpz_t *argv, size_t count, const mpz_t cand) {
-    for (size_t i = 0; i < count; ++i) {
-        mpz_t g;
-        mpz_init(g);
-        mpz_gcd(g, argv[i], cand);
-        int ok = mpz_cmp_ui(g, 1) == 0;
-        mpz_clear(g);
-        if (!ok) return 0;
-    }
-    return 1;
 }
 
 vector_t *vector_rand_coprime_init(size_t n, unsigned long start, unsigned long end) {
@@ -93,12 +112,6 @@ void vector_free(vector_t *v) {
     free(v);
 }
 
-struct chinese_remainder_t {
-    vector_t *moduli;
-    vector_t *residue;
-    mpz_t M;
-};
-
 chinese_remainder_t *crt_init(vector_t *moduli, vector_t *residue) {
     if (!moduli || !residue) return NULL;
     if (moduli->argc == 0 || moduli->argc != residue->argc) return NULL;
@@ -111,7 +124,7 @@ chinese_remainder_t *crt_init(vector_t *moduli, vector_t *residue) {
     mpz_init_set_ui(crt->M, 1);
 
     for (size_t i = 0; i < moduli->argc; ++i) {
-        if (mpz_cmp_ui(moduli->argv[i], 1) <= 0) {   /* m <= 1 */
+        if (mpz_cmp_ui(moduli->argv[i], 1) <= 0) {
             mpz_clear(crt->M);
             free(crt);
             return NULL;
@@ -195,10 +208,12 @@ fail:
 }
 
 int main(int argc, char **argv) {
+    if (argc != 3) { fputs("2 arguments expected\n", stderr); return 1; }
+
     srandom((unsigned int)time(NULL));
 
-    const size_t n = 100;
-    const unsigned long max = 100000000;
+    const size_t n = (size_t)strtoul(argv[1], NULL, 10);
+    const unsigned long max = strtoul(argv[2], NULL, 10);
 
     vector_t *residue = vector_rand_init(n, -(long)max, (long)max);
     if (!residue) { fputs("residue init failed\n", stderr); return 1; }
