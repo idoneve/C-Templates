@@ -7,18 +7,21 @@
 typedef struct vector_t vector_t;
 typedef struct chinese_remainder_t chinese_remainder_t;
 
-static int is_coprime_with(const mpz_t *argv, size_t count, const mpz_t cand);
+static int is_pairwise_coprime(const mpz_t *, size_t, const mpz_t);
 
-vector_t *vector_init(size_t argc, const mpz_t *argv);
-vector_t *vector_rand_init(size_t n, long start, long end);
-vector_t *vector_rand_coprime_init(size_t n, unsigned long start, unsigned long end);
-void vector_free(vector_t *v);
+vector_t *vector_init(size_t, const mpz_t *);
+vector_t *vector_rand_init(size_t, long, long);
+vector_t *vector_rand_coprime_init(size_t n, unsigned long, unsigned long);
+void vector_free(vector_t *);
 
-chinese_remainder_t *crt_init(vector_t *moduli, vector_t *residue);
-void crt_free(chinese_remainder_t *crt);
-void crt_print(const chinese_remainder_t *crt);
-void crt_reduce(chinese_remainder_t *crt);
-int crt_solve(const chinese_remainder_t *crt, mpz_t x);
+chinese_remainder_t *crt_init(vector_t *, vector_t *);
+void crt_free(chinese_remainder_t *);
+void crt_print(const chinese_remainder_t *);
+void crt_reduce(chinese_remainder_t *);
+int crt_solve(const chinese_remainder_t *, mpz_t);
+void crt_random(const size_t, const unsigned long);
+void crt_encrypt(const char *, const char *, mpz_t *);
+void crt_decypt(const mpz_t *, const char *, mpz_t *);
 
 struct vector_t {
     size_t argc;
@@ -31,7 +34,7 @@ struct chinese_remainder_t {
     mpz_t M;
 };
 
-static int is_coprime_with(const mpz_t *argv, size_t count, const mpz_t cand) {
+static int is_pairwise_coprime(const mpz_t *argv, size_t count, const mpz_t cand) {
     for (size_t i = 0; i < count; ++i) {
         mpz_t g;
         mpz_init(g);
@@ -208,67 +211,23 @@ fail:
     return 0;
 }
 
-int main(int argc, char **argv) {
-    if (argc != 3) { fputs("2 arguments expected\n", stderr); return 1; }
-
-    srandom((unsigned int)time(NULL));
-
-    const size_t n = (size_t)strtoul(argv[1], NULL, 10);
-    const unsigned long max = strtoul(argv[2], NULL, 10);
+void crt_random(const size_t n_, const unsigned long max_) {
+    const size_t n = n_;
+    const unsigned long max = max_;
 
     vector_t *residue = vector_rand_init(n, -(long)max, (long)max);
-    if (!residue) { fputs("residue init failed\n", stderr); return 1; }
+    if (!residue) { fputs("residue init failed\n", stderr); return; }
 
     vector_t *moduli = vector_rand_coprime_init(n, 2, max);
     if (!moduli) {
         fputs("moduli init failed\n", stderr);
-        vector_free(residue); return 1;
+        vector_free(residue); return;
     }
-
-    // const char str_hash[] = "EAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    // const char key[] = "\x61\x65\x67\x6b\x7f\x02\x03\x89\x05\x07\x0b\x0d\x6d\x71\x11\x35\x3b\x43\x13\x17\x1d\x1f\x25\x2b\x2f\x47\x49\x4f\x53\x3d";
-
-    // const size_t L_str = strlen(str_hash);
-    // const size_t L_key = strlen(key);
-
-    // if (L_str != L_key) {
-    //     printf("%lu != %lu\n", L_str, L_key);
-    //     return 1;
-    // }
-    // const size_t LENGTH = L_str;
-
-    // mpz_t *mpz_str_hash = malloc(LENGTH * sizeof(mpz_t));
-    // mpz_t *mpz_key = malloc(LENGTH * sizeof(mpz_t));
-    // if (!mpz_str_hash || !mpz_key) return 1;
-
-    // for (size_t i = 0; i < LENGTH; ++i) {
-    //     mpz_init(mpz_str_hash[i]);
-    //     mpz_init(mpz_key[i]);
-
-    //     uint64_t ascii_str = (uint64_t)(unsigned char)str_hash[i];
-    //     uint64_t ascii_key = (uint64_t)(unsigned char)key[i];
-
-    //     mpz_set_ui(mpz_str_hash[i], ascii_str);
-    //     mpz_set_ui(mpz_key[i], ascii_key);
-    // }
-
-    // printf("Original String: %s\n", str_hash);
-    // for (size_t i = 0; i < LENGTH; ++i) {
-    //     gmp_printf("'%c' -> %Zd\n", str_hash[i], mpz_str_hash[i]);
-    // }
-
-    // printf("\nOriginal Key: %s\n", key);
-    // for (size_t i = 0; i < LENGTH; ++i) {
-    //     gmp_printf("'%c' -> %Zd\n", key[i], mpz_key[i]);
-    // }
-
-    // vector_t *moduli = vector_init(30, (const mpz_t *)mpz_key);
-    // vector_t *residue = vector_init(30, (const mpz_t *)mpz_str_hash);
 
     chinese_remainder_t *crt = crt_init(moduli, residue);
     if (!crt) {
         fputs("crt init failed\n", stderr);
-        vector_free(moduli); vector_free(residue); return 1;
+        vector_free(moduli); vector_free(residue); return;
     }
 
     crt_reduce(crt);
@@ -279,15 +238,88 @@ int main(int argc, char **argv) {
         gmp_printf("\nx = %Zd (mod %Zd)\n", x, crt->M);
     mpz_clear(x);
 
-    // for (size_t i = 0; i < LENGTH; ++i) {
-    //     mpz_clear(mpz_str_hash[i]);
-    //     mpz_clear(mpz_key[i]);
-    // }
-    // free(mpz_str_hash);
-    // free(mpz_key);
+    crt_free(crt);
+    vector_free(moduli);
+    vector_free(residue);
+}
+
+void crt_encrypt(const char *str_hash, const char *key, mpz_t *output) {
+    const size_t L_str = strlen(str_hash);
+    const size_t L_key = strlen(key);
+
+    if (L_str != L_key) {
+        printf("%lu != %lu\n", L_str, L_key);
+        return;
+    }
+    const size_t LENGTH = L_str;
+
+    mpz_t *mpz_str_hash = malloc(LENGTH * sizeof(mpz_t));
+    mpz_t *mpz_key = malloc(LENGTH * sizeof(mpz_t));
+    if (!mpz_str_hash || !mpz_key) return;
+
+    for (size_t i = 0; i < LENGTH; ++i) {
+        mpz_init(mpz_str_hash[i]);
+        mpz_init(mpz_key[i]);
+
+        uint64_t ascii_str = (uint64_t)(unsigned char)str_hash[i];
+        uint64_t ascii_key = (uint64_t)(unsigned char)key[i];
+
+        mpz_set_ui(mpz_str_hash[i], ascii_str);
+        mpz_set_ui(mpz_key[i], ascii_key);
+    }
+
+    printf("Original String: %s\n", str_hash);
+    for (size_t i = 0; i < LENGTH; ++i) {
+        gmp_printf("'%c' -> %Zd\n", str_hash[i], mpz_str_hash[i]);
+    }
+
+    printf("\nOriginal Key: %s\n", key);
+    for (size_t i = 0; i < LENGTH; ++i) {
+        gmp_printf("'%c' -> %Zd\n", key[i], mpz_key[i]);
+    }
+
+    vector_t *moduli = vector_init(30, (const mpz_t *)mpz_key);
+    vector_t *residue = vector_init(30, (const mpz_t *)mpz_str_hash);
+
+    chinese_remainder_t *crt = crt_init(moduli, residue);
+    if (!crt) {
+        fputs("crt init failed\n", stderr);
+        vector_free(moduli); vector_free(residue); return;
+    }
+
+    crt_print(crt);
+
+    mpz_t x; mpz_init(x);
+    if (crt_solve(crt, x))
+        gmp_printf("\nx = %Zd (mod %Zd)\n", x, crt->M);
+    mpz_set(output, x);
+    mpz_clear(x);
+
+    for (size_t i = 0; i < LENGTH; ++i) {
+        mpz_clear(mpz_str_hash[i]);
+        mpz_clear(mpz_key[i]);
+    }
+    free(mpz_str_hash);
+    free(mpz_key);
 
     crt_free(crt);
     vector_free(moduli);
     vector_free(residue);
+}
+
+void crt_decypt(const mpz_t *hash, const char *key, mpz_t *output) {
+    // TODO
+}
+
+int main(void) {
+    srandom((unsigned int)time(NULL));
+
+    const char str_hash[] = "MYNAMEISAUSTINBITCHHHHHWHOTFRU";
+    const char key[] = "\x61\x65\x67\x6b\x7f\x02\x03\x89\x05\x07\x0b\x0d\x6d\x71\x11\x35\x3b\x43\x13\x17\x1d\x1f\x25\x2b\x2f\x47\x49\x4f\x53\x3d";
+    
+    mpz_t x; mpz_init(x);
+    crt_encrypt(str_hash, key, x);
+    mpz_clear(x);
+
     return 0;
 }
